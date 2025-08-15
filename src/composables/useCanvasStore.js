@@ -63,7 +63,7 @@ export const useCanvasStore = defineStore('canvas', () => {
       id: 'planta_1',
       nombre: 'Planta Baja',
       descripcion: 'Nivel principal del edificio',
-      elementos: ['elem_1', 'elem_2'],
+      elementos: [], // Los elementos se calculan dinámicamente
       activa: true,
       dimensiones: {
         alto: 300, // cm
@@ -76,7 +76,7 @@ export const useCanvasStore = defineStore('canvas', () => {
       id: 'planta_2',
       nombre: 'Primer Piso',
       descripcion: 'Segundo nivel del edificio',
-      elementos: ['elem_3'],
+      elementos: [], // Los elementos se calculan dinámicamente
       activa: false,
       dimensiones: {
         alto: 280,
@@ -89,7 +89,7 @@ export const useCanvasStore = defineStore('canvas', () => {
       id: 'planta_3',
       nombre: 'Segundo Piso',
       descripcion: 'Tercer nivel del edificio',
-      elementos: [],
+      elementos: [], // Los elementos se calculan dinámicamente
       activa: false,
       dimensiones: {
         alto: 280,
@@ -128,15 +128,29 @@ export const useCanvasStore = defineStore('canvas', () => {
 
   // Getters
   const elementosVisibles = computed(() => {
+    console.log('DEBUG elementosVisibles - Estado actual:', {
+      contextoNavegacion: contextoNavegacion.value,
+      totalElementos: elementos.value.length,
+      plantaActiva: plantaActiva.value,
+    })
+
     // Si estamos en una planta, mostrar solo elementos de nivel raíz (sin padre)
     if (contextoNavegacion.value.tipo === 'planta') {
-      const visibles = elementos.value.filter(
-        (el) => el.plantaId === contextoNavegacion.value.id && !el.padre,
-      )
-      console.log('Elementos visibles en planta (solo raíz):', {
-        plantaId: contextoNavegacion.value.id,
+      const plantaId = contextoNavegacion.value.id
+      const elementosEnEstaPlanta = elementos.value.filter((el) => el.plantaId === plantaId)
+      const visibles = elementosEnEstaPlanta.filter((el) => !el.padre)
+
+      console.log('DEBUG elementosVisibles - En planta:', {
+        plantaId,
+        elementosEnEstaPlanta: elementosEnEstaPlanta.length,
         elementosRaiz: visibles.length,
-        elementos: visibles,
+        elementos: visibles.map((el) => ({
+          id: el.id,
+          nombre: el.nombre,
+          x: el.x,
+          y: el.y,
+          plantaId: el.plantaId,
+        })),
       })
       return visibles
     }
@@ -654,6 +668,296 @@ export const useCanvasStore = defineStore('canvas', () => {
     }
   }
 
+  // === FUNCIONES DE SERIALIZACIÓN ===
+
+  /**
+   * Serializa el estado completo del canvas a JSON
+   * @returns {string} JSON string con todo el estado
+   */
+  const serialize = () => {
+    const state = {
+      // Información básica del canvas
+      meta: {
+        version: '1.0.0',
+        timestamp: new Date().toISOString(),
+        app: 'dv-canva-editor',
+      },
+
+      // Estado de plantas con todas sus propiedades
+      plantas: plantas.value.map((planta) => {
+        // Calcular elementos que pertenecen a esta planta dinámicamente
+        const elementosEnPlanta = elementos.value
+          .filter((el) => el.plantaId === planta.id)
+          .map((el) => el.id)
+
+        return {
+          id: planta.id,
+          nombre: planta.nombre,
+          descripcion: planta.descripcion || '',
+          dimensiones: {
+            alto: planta.dimensiones?.alto || 280,
+            ancho: planta.dimensiones?.ancho || 800,
+            largo: planta.dimensiones?.largo || 1000,
+          },
+          pesoMaximoSoportado: planta.pesoMaximoSoportado || 3000,
+          elementos: elementosEnPlanta,
+          activa: planta.activa || false,
+          // Propiedades personalizadas adicionales
+          propiedadesPersonalizadas: planta.propiedadesPersonalizadas || {},
+        }
+      }),
+
+      // Estado de elementos con propiedades estáticas y personalizadas
+      elementos: elementos.value.map((elemento) => ({
+        id: elemento.id,
+        nombre: elemento.nombre,
+        tipo: elemento.tipo,
+        categoria: elemento.categoria,
+        plantaId: elemento.plantaId,
+
+        // Propiedades físicas (maneja formato nuevo y legacy)
+        dimensiones: elemento.dimensiones
+          ? {
+              ancho: elemento.dimensiones.ancho,
+              largo: elemento.dimensiones.largo,
+              alto: elemento.dimensiones.alto,
+            }
+          : elemento.width || elemento.height
+            ? {
+                // Fallback para formato legacy (width, height directos)
+                ancho: elemento.width || 100,
+                largo: elemento.height || 60,
+                alto: elemento.alto || 20,
+              }
+            : null,
+
+        // Posición y transformación (maneja formato nuevo y legacy)
+        posicion: elemento.posicion
+          ? {
+              x: elemento.posicion.x,
+              y: elemento.posicion.y,
+              z: elemento.posicion.z || 0,
+              rotation: elemento.posicion.rotation || 0,
+            }
+          : {
+              // Fallback para formato legacy (x, y directos)
+              x: elemento.x || 0,
+              y: elemento.y || 0,
+              z: elemento.z || 0,
+              rotation: elemento.rotation || 0,
+            },
+
+        // Propiedades visuales
+        visual: {
+          colorBase: elemento.colorBase || '#3b82f6',
+          forma: elemento.forma || 'rectangular',
+          visible: elemento.visible !== false, // Por defecto visible
+        },
+
+        // Propiedades funcionales
+        propiedades: {
+          pesoMaximo: elemento.pesoMaximo || 0,
+          ubicacion: elemento.ubicacion || 'suelo',
+          descripcion: elemento.descripcion || '',
+        },
+
+        // Jerarquía
+        jerarquia: {
+          padre: elemento.padre || null,
+          hijos: elemento.hijos || [],
+          nivel: elemento.nivel || 0,
+        },
+
+        // Propiedades personalizadas del usuario
+        propiedadesPersonalizadas: elemento.propiedadesPersonalizadas || {},
+
+        // Metadatos adicionales
+        metadatos: {
+          fechaCreacion: elemento.fechaCreacion || new Date().toISOString(),
+          fechaModificacion: elemento.fechaModificacion || new Date().toISOString(),
+          creador: elemento.creador || 'usuario',
+        },
+      })),
+
+      // Estado de navegación y configuración
+      configuracion: {
+        plantaActiva: plantaActiva.value,
+        elementoSeleccionado: elementoSeleccionado.value,
+        vistaActiva: vistaActiva.value,
+        zoom: zoom.value,
+        panX: panX.value,
+        panY: panY.value,
+        contextoNavegacion: {
+          tipo: contextoNavegacion.value.tipo,
+          id: contextoNavegacion.value.id,
+          path: contextoNavegacion.value.path || [],
+        },
+        canvasAdaptativo: {
+          width: canvasAdaptativo.value.width,
+          height: canvasAdaptativo.value.height,
+          escala: canvasAdaptativo.value.escala,
+        },
+      },
+    }
+
+    return JSON.stringify(state, null, 2)
+  }
+
+  /**
+   * Deserializa un JSON y reconstruye el estado del canvas
+   * @param {string} jsonString - JSON string con el estado
+   * @returns {boolean} true si la deserialización fue exitosa
+   */
+  const deserialize = (jsonString) => {
+    try {
+      const state = JSON.parse(jsonString)
+
+      // Validar estructura básica
+      if (!state || !state.plantas || !state.elementos || !state.configuracion) {
+        console.error('Estructura JSON inválida')
+        return false
+      }
+
+      // Limpiar estado actual
+      plantas.value = []
+      elementos.value = []
+
+      // Restaurar plantas
+      state.plantas.forEach((plantaData) => {
+        plantas.value.push({
+          id: plantaData.id,
+          nombre: plantaData.nombre,
+          descripcion: plantaData.descripcion || '',
+          dimensiones: {
+            alto: plantaData.dimensiones?.alto || 280,
+            ancho: plantaData.dimensiones?.ancho || 800,
+            largo: plantaData.dimensiones?.largo || 1000,
+          },
+          pesoMaximoSoportado: plantaData.pesoMaximoSoportado || 3000,
+          elementos: plantaData.elementos || [],
+          activa: plantaData.activa || false,
+          propiedadesPersonalizadas: plantaData.propiedadesPersonalizadas || {},
+        })
+      })
+
+      // Restaurar elementos
+      state.elementos.forEach((elementoData) => {
+        // Extraer posición y dimensiones
+        const posX = elementoData.posicion?.x || 0
+        const posY = elementoData.posicion?.y || 0
+        const width = elementoData.dimensiones?.ancho || 100
+        const height = elementoData.dimensiones?.largo || 60
+
+        elementos.value.push({
+          id: elementoData.id,
+          nombre: elementoData.nombre,
+          tipo: elementoData.tipo,
+          categoria: elementoData.categoria,
+          plantaId: elementoData.plantaId,
+
+          // Propiedades físicas (estructura nueva)
+          dimensiones: {
+            ancho: width,
+            largo: height,
+            alto: elementoData.dimensiones?.alto || 20,
+          },
+
+          // Posición (estructura nueva)
+          posicion: {
+            x: posX,
+            y: posY,
+            z: elementoData.posicion?.z || 0,
+            rotation: elementoData.posicion?.rotation || 0,
+          },
+
+          // Propiedades legacy para compatibilidad con Konva
+          x: posX,
+          y: posY,
+          width: width,
+          height: height,
+
+          // Propiedades visuales
+          color: elementoData.visual?.colorBase || '#3b82f6',
+          colorBase: elementoData.visual?.colorBase || '#3b82f6',
+          forma: elementoData.visual?.forma || 'rectangular',
+          visible: elementoData.visual?.visible !== false,
+
+          // Propiedades funcionales
+          pesoMaximo: elementoData.propiedades?.pesoMaximo || 0,
+          ubicacion: elementoData.propiedades?.ubicacion || 'suelo',
+          descripcion: elementoData.propiedades?.descripcion || '',
+
+          // Jerarquía
+          padre: elementoData.jerarquia?.padre || null,
+          hijos: elementoData.jerarquia?.hijos || [],
+          nivel: elementoData.jerarquia?.nivel || 0,
+
+          // Propiedades personalizadas
+          propiedadesPersonalizadas: elementoData.propiedadesPersonalizadas || {},
+
+          // Metadatos
+          metadata: {
+            fechaCreacion: elementoData.metadatos?.fechaCreacion || new Date().toISOString(),
+            fechaModificacion:
+              elementoData.metadatos?.fechaModificacion || new Date().toISOString(),
+            creador: elementoData.metadatos?.creador || 'usuario',
+            descripcion: elementoData.propiedades?.descripcion || '',
+            material: 'Estándar',
+            capacidad: 'Variable',
+          },
+        })
+      })
+
+      // Restaurar configuración
+      const config = state.configuracion
+      plantaActiva.value = config.plantaActiva || plantas.value[0]?.id || null
+      elementoSeleccionado.value = config.elementoSeleccionado || null
+      vistaActiva.value = config.vistaActiva || 'XY'
+      zoom.value = config.zoom || 1
+      panX.value = config.panX || 0
+      panY.value = config.panY || 0
+
+      // Restaurar contexto de navegación
+      if (config.contextoNavegacion) {
+        contextoNavegacion.value = {
+          tipo: config.contextoNavegacion.tipo || 'planta',
+          id: config.contextoNavegacion.id || plantaActiva.value,
+          path: config.contextoNavegacion.path || [],
+        }
+      }
+
+      // Restaurar canvas adaptativo
+      if (config.canvasAdaptativo) {
+        canvasAdaptativo.value = {
+          width: config.canvasAdaptativo.width || 800,
+          height: config.canvasAdaptativo.height || 600,
+          escala: config.canvasAdaptativo.escala || 1,
+        }
+      }
+
+      // Guardar en historial
+      saveToHistory('Estado deserializado desde JSON')
+
+      console.log('Estado deserializado exitosamente:', {
+        plantas: plantas.value.length,
+        elementos: elementos.value.length,
+        plantaActiva: plantaActiva.value,
+      })
+
+      // Guardar en historial
+      saveToHistory(
+        `Canvas importado: ${elementos.value.length} elementos en ${plantas.value.length} plantas`,
+      )
+
+      return true
+    } catch (error) {
+      console.error('Error al deserializar JSON:', error)
+      return false
+    }
+  }
+
+  // === FIN FUNCIONES DE SERIALIZACIÓN ===
+
   return {
     // State
     elementos,
@@ -718,5 +1022,9 @@ export const useCanvasStore = defineStore('canvas', () => {
     seleccionarPlantaConHistorial,
     agregarPlantaConHistorial,
     eliminarPlantaConHistorial,
+
+    // === FUNCIONES DE SERIALIZACIÓN ===
+    serialize,
+    deserialize,
   }
 })

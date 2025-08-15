@@ -18,6 +18,22 @@
           </svg>
           Historial
         </button>
+
+        <button
+          @click="openImportExportModal"
+          class="header-btn import-export-btn"
+          title="Importar / Exportar Canvas"
+        >
+          <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"
+            />
+          </svg>
+          Import/Export
+        </button>
       </div>
       <div class="header-info">
         <span>Editor Visual Jerárquico</span>
@@ -49,16 +65,20 @@
 
     <!-- Modal de historial -->
     <HistorialModal :is-open="showHistorialModal" @close="closeHistorialModal" />
+
+    <!-- Modal de importar/exportar -->
+    <ImportExportModal :mostrar="showImportExportModal" @cerrar="closeImportExportModal" />
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
+import SidebarPanel from './components/SidebarPanel.vue'
 import CanvasView from './components/CanvasView.vue'
 import PlantasPanel from './components/PlantasPanel.vue'
-import SidebarPanel from './components/SidebarPanel.vue'
 import PropiedadesPanel from './components/PropiedadesPanel.vue'
 import HistorialModal from './components/HistorialModal.vue'
+import ImportExportModal from './components/ImportExportModal.vue'
 import NavegacionJerarquica from './components/NavegacionJerarquica.vue'
 import { useCanvasWithHistory } from './composables/useCanvasWithHistory'
 import { useCanvasBuffer } from './composables/useCanvasBuffer'
@@ -69,6 +89,7 @@ const buffer = useCanvasBuffer()
 
 const selectedElement = ref(null)
 const showHistorialModal = ref(false)
+const showImportExportModal = ref(false)
 
 const openHistorialModal = () => {
   showHistorialModal.value = true
@@ -76,6 +97,14 @@ const openHistorialModal = () => {
 
 const closeHistorialModal = () => {
   showHistorialModal.value = false
+}
+
+const openImportExportModal = () => {
+  showImportExportModal.value = true
+}
+
+const closeImportExportModal = () => {
+  showImportExportModal.value = false
 }
 
 const handleElementSelect = (elemento) => {
@@ -173,6 +202,7 @@ onUnmounted(() => {
   flex: 1;
   display: flex;
   justify-content: center;
+  gap: 0.75rem;
 }
 
 .header-btn {
@@ -201,6 +231,15 @@ onUnmounted(() => {
 .header-btn .icon {
   width: 16px;
   height: 16px;
+}
+
+.import-export-btn {
+  background: rgba(34, 197, 94, 0.8) !important;
+}
+
+.import-export-btn:hover {
+  background: rgba(34, 197, 94, 1) !important;
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3) !important;
 }
 
 .header-info span {

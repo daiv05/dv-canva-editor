@@ -492,12 +492,35 @@ const createElementFromDrop = (data, dropEvent) => {
     id: `${elemento.tipo || elemento.categoria}_${Date.now()}`,
     tipo: elemento.tipo || elemento.categoria || 'elemento',
     nombre: elemento.nombre || 'Nuevo elemento',
+
+    // Estructura correcta para posición
+    posicion: {
+      x: x - width / 2,
+      y: y - height / 2,
+      z: 0,
+      rotation: 0,
+    },
+
+    // Estructura correcta para dimensiones
+    dimensiones: {
+      ancho: width,
+      largo: height,
+      alto: elemento.dimensiones?.alto || elemento.alto || 20,
+    },
+
+    // Propiedades legacy para compatibilidad con Konva
     x: x - width / 2,
     y: y - height / 2,
     width: width,
     height: height,
+
     color: color,
+    colorBase: color,
     forma: elemento.forma || 'rectangular',
+    ubicacion: elemento.ubicacion || elemento.montado || 'suelo',
+    pesoMaximo: elemento.pesoMaximo || 0,
+    descripcion: elemento.descripcion || '',
+
     // No asignar plantaId ni padre aquí - el store se encarga según el contexto
     hijos: [],
     metadata: {
