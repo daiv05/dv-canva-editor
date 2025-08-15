@@ -1,0 +1,337 @@
+<!--
+  PropiedadesPanel.vue
+  Panel de propiedades del elemento seleccionado en el canvas.
+-->
+
+<template>
+  <div class="h-full flex flex-col bg-white border-l border-gray-200" data-properties-panel>
+    <!-- Header -->
+    <div class="p-4 border-b border-gray-200">
+      <h2 class="text-lg font-semibold text-gray-800">Propiedades</h2>
+    </div>
+
+    <!-- Contenido -->
+    <div class="flex-1 overflow-y-auto p-4">
+      <!-- Sin elemento seleccionado -->
+      <div v-if="!elementoSeleccionado" class="text-center py-12">
+        <svg
+          class="w-12 h-12 text-gray-300 mx-auto mb-4"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zM21 5a2 2 0 00-2-2h-4a2 2 0 00-2 2v12a4 4 0 004 4h4a4 4 0 004-4V5z"
+          />
+        </svg>
+        <p class="text-gray-500 text-sm">
+          Selecciona un elemento en el canvas<br />
+          para ver sus propiedades
+        </p>
+      </div>
+
+      <!-- Panel de propiedades -->
+      <div v-else class="space-y-6">
+        <!-- Información básica -->
+        <div class="bg-gray-50 rounded-lg p-4">
+          <h3 class="text-sm font-medium text-gray-700 mb-3">Información Básica</h3>
+
+          <!-- ID (solo lectura) -->
+          <div class="mb-4">
+            <label class="block text-xs font-medium text-gray-600 mb-1"> ID del Elemento </label>
+            <input
+              :value="elementoSeleccionado.id"
+              type="text"
+              disabled
+              class="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-sm text-gray-500 cursor-not-allowed"
+            />
+            <p class="text-xs text-gray-500 mt-1">
+              El ID se genera automáticamente y no puede modificarse
+            </p>
+          </div>
+
+          <!-- Tipo (solo lectura) -->
+          <div class="mb-4">
+            <label class="block text-xs font-medium text-gray-600 mb-1"> Tipo de Elemento </label>
+            <input
+              :value="elementoSeleccionado.tipo"
+              type="text"
+              disabled
+              class="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-sm text-gray-500 cursor-not-allowed capitalize"
+            />
+          </div>
+
+          <!-- Nombre editable -->
+          <div class="mb-4">
+            <label class="block text-xs font-medium text-gray-600 mb-1"> Nombre </label>
+            <input
+              v-model="propiedadesEditables.nombre"
+              type="text"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Nombre del elemento"
+              @input="actualizarPropiedad('nombre', $event.target.value)"
+            />
+          </div>
+
+          <!-- Color editable -->
+          <div class="mb-4">
+            <label class="block text-xs font-medium text-gray-600 mb-1"> Color </label>
+            <div class="flex items-center gap-3">
+              <input
+                v-model="propiedadesEditables.color"
+                type="color"
+                class="w-12 h-10 border border-gray-300 rounded-lg cursor-pointer"
+                @input="actualizarPropiedad('color', $event.target.value)"
+              />
+              <input
+                v-model="propiedadesEditables.color"
+                type="text"
+                class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="#3B82F6"
+                @input="actualizarPropiedad('color', $event.target.value)"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- Posición y dimensiones -->
+        <div class="bg-gray-50 rounded-lg p-4">
+          <h3 class="text-sm font-medium text-gray-700 mb-3">Posición y Dimensiones</h3>
+
+          <div class="grid grid-cols-2 gap-3">
+            <!-- Posición X -->
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1"> X (px) </label>
+              <input
+                :value="Math.round(elementoSeleccionado.x)"
+                type="number"
+                disabled
+                class="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-sm text-gray-500 cursor-not-allowed"
+              />
+            </div>
+
+            <!-- Posición Y -->
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1"> Y (px) </label>
+              <input
+                :value="Math.round(elementoSeleccionado.y)"
+                type="number"
+                disabled
+                class="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-sm text-gray-500 cursor-not-allowed"
+              />
+            </div>
+
+            <!-- Ancho -->
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1"> Ancho (px) </label>
+              <input
+                :value="elementoSeleccionado.width"
+                type="number"
+                disabled
+                class="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-sm text-gray-500 cursor-not-allowed"
+              />
+            </div>
+
+            <!-- Alto -->
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1"> Alto (px) </label>
+              <input
+                :value="elementoSeleccionado.height"
+                type="number"
+                disabled
+                class="w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg text-sm text-gray-500 cursor-not-allowed"
+              />
+            </div>
+          </div>
+
+          <p class="text-xs text-gray-500 mt-2">
+            Las dimensiones y posición se modifican directamente en el canvas
+          </p>
+        </div>
+
+        <!-- Jerarquía -->
+        <div
+          v-if="elementoSeleccionado.padre || elementoSeleccionado.hijos?.length"
+          class="bg-gray-50 rounded-lg p-4"
+        >
+          <h3 class="text-sm font-medium text-gray-700 mb-3">Jerarquía</h3>
+
+          <!-- Elemento padre -->
+          <div v-if="elementoSeleccionado.padre" class="mb-3">
+            <label class="block text-xs font-medium text-gray-600 mb-1"> Elemento Padre </label>
+            <div
+              class="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg"
+            >
+              <svg class="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span class="text-sm text-blue-700">{{ elementoSeleccionado.padre }}</span>
+            </div>
+          </div>
+
+          <!-- Elementos hijos -->
+          <div v-if="elementoSeleccionado.hijos?.length" class="mb-3">
+            <label class="block text-xs font-medium text-gray-600 mb-1">
+              Elementos Hijos ({{ elementoSeleccionado.hijos.length }})
+            </label>
+            <div class="space-y-1">
+              <div
+                v-for="hijoId in elementoSeleccionado.hijos"
+                :key="hijoId"
+                class="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-lg"
+              >
+                <svg class="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span class="text-sm text-green-700">{{ hijoId }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Preview del elemento -->
+        <div class="bg-gray-50 rounded-lg p-4">
+          <h3 class="text-sm font-medium text-gray-700 mb-3">Vista Previa</h3>
+          <div
+            class="flex items-center justify-center p-4 bg-white border border-gray-200 rounded-lg"
+          >
+            <div
+              class="flex items-center justify-center border border-gray-300 rounded"
+              :style="{
+                backgroundColor: propiedadesEditables.color,
+                width: Math.min(120, elementoSeleccionado.width / 2) + 'px',
+                height: Math.min(80, elementoSeleccionado.height / 2) + 'px',
+              }"
+            >
+              <span class="text-white font-bold text-xs">
+                {{
+                  propiedadesEditables.nombre?.charAt(0)?.toUpperCase() ||
+                  elementoSeleccionado.tipo.charAt(0).toUpperCase()
+                }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Acciones -->
+        <div class="flex gap-2">
+          <button
+            @click="resetearPropiedades"
+            class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm"
+          >
+            Restablecer
+          </button>
+          <button
+            @click="deseleccionarElemento"
+            class="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm"
+          >
+            Deseleccionar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, watch, computed } from 'vue'
+import { useCanvasStore } from '@/composables/useCanvasStore.js'
+
+// Store
+const canvasStore = useCanvasStore()
+
+// Referencias reactivas
+const propiedadesEditables = ref({
+  nombre: '',
+  color: '#3B82F6',
+})
+
+// Computed
+const elementoSeleccionado = computed(() => canvasStore.elementoSeleccionadoCompleto)
+
+// Watchers
+watch(
+  elementoSeleccionado,
+  (nuevoElemento) => {
+    if (nuevoElemento) {
+      // Inicializar propiedades editables con los valores actuales
+      propiedadesEditables.value = {
+        nombre: nuevoElemento.nombre || generarNombrePorDefecto(nuevoElemento),
+        color: nuevoElemento.color || '#3B82F6',
+      }
+    }
+  },
+  { immediate: true },
+)
+
+// Métodos
+const generarNombrePorDefecto = (elemento) => {
+  return `${elemento.tipo.charAt(0).toUpperCase() + elemento.tipo.slice(1)} ${elemento.id.split('_')[1] || ''}`
+}
+
+const actualizarPropiedad = (propiedad, valor) => {
+  if (!elementoSeleccionado.value) return
+
+  // Actualizar el valor local
+  propiedadesEditables.value[propiedad] = valor
+
+  // Actualizar en el store (tiempo real)
+  canvasStore.actualizarElemento(elementoSeleccionado.value.id, {
+    [propiedad]: valor,
+  })
+}
+
+const resetearPropiedades = () => {
+  if (!elementoSeleccionado.value) return
+
+  const propiedadesOriginales = {
+    nombre: generarNombrePorDefecto(elementoSeleccionado.value),
+    color: '#3B82F6',
+  }
+
+  propiedadesEditables.value = { ...propiedadesOriginales }
+  canvasStore.actualizarElemento(elementoSeleccionado.value.id, propiedadesOriginales)
+}
+
+const deseleccionarElemento = () => {
+  canvasStore.seleccionarElemento(null)
+}
+</script>
+
+<style scoped>
+@reference '@/styles/index.css';
+
+/* Estilos personalizados para mejor UX */
+input[type='color'] {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  border: none;
+  cursor: pointer;
+}
+
+input[type='color']::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+input[type='color']::-webkit-color-swatch {
+  border: none;
+  border-radius: 0.375rem;
+}
+
+input[type='color']::-moz-color-swatch {
+  border: none;
+  border-radius: 0.375rem;
+}
+
+input[disabled] {
+  cursor: not-allowed;
+}
+
+.cursor-not-allowed {
+  cursor: not-allowed !important;
+}
+</style>
