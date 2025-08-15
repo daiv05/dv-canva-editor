@@ -69,18 +69,6 @@
           </span>
         </div>
       </div>
-
-      <!-- Selector de plantas (solo visible en nivel de planta) -->
-      <select
-        v-if="canvasStore.estaEnPlanta"
-        :value="canvasStore.contextoNavegacion.id"
-        @change="cambiarPlanta($event.target.value)"
-        class="plant-selector"
-      >
-        <option v-for="planta in plantas" :key="planta.id" :value="planta.id">
-          {{ planta.nombre }}
-        </option>
-      </select>
     </div>
   </div>
 </template>
@@ -93,11 +81,6 @@ import { useCanvasStore } from '@/composables/useCanvasStore'
 const canvasStore = useCanvasStore()
 
 // Computed properties
-const plantas = computed(() => {
-  // Acceder directamente al array de plantas del store
-  return canvasStore.plantas
-})
-
 const elementoActual = computed(() => {
   if (canvasStore.estaEnElemento) {
     return canvasStore.elementoContenedorActual
@@ -135,10 +118,6 @@ const navegarACrumb = (crumb, index) => {
       }
     }
   }
-}
-
-const cambiarPlanta = (plantaId) => {
-  canvasStore.navegarAPlanta(plantaId)
 }
 </script>
 

@@ -42,6 +42,11 @@
               <div class="planta-info">
                 <h3 class="planta-nombre">{{ planta.nombre }}</h3>
                 <p class="planta-elementos">{{ contarElementosEnPlanta(planta.id) }} elementos</p>
+                <p class="planta-dimensiones">
+                  {{ planta.dimensiones?.ancho || 800 }}×{{ planta.dimensiones?.largo || 1000 }}×{{
+                    planta.dimensiones?.alto || 280
+                  }}cm
+                </p>
               </div>
             </div>
 
@@ -155,6 +160,67 @@
             ></textarea>
           </div>
 
+          <!-- Dimensiones -->
+          <div class="form-group">
+            <label class="form-label">Dimensiones (cm)</label>
+            <div class="grid grid-cols-3 gap-3">
+              <div>
+                <label for="ancho" class="form-label-small">Ancho</label>
+                <input
+                  id="ancho"
+                  v-model.number="formularioPlanta.dimensiones.ancho"
+                  type="number"
+                  class="form-input"
+                  placeholder="800"
+                  min="100"
+                  max="5000"
+                  required
+                />
+              </div>
+              <div>
+                <label for="largo" class="form-label-small">Largo</label>
+                <input
+                  id="largo"
+                  v-model.number="formularioPlanta.dimensiones.largo"
+                  type="number"
+                  class="form-input"
+                  placeholder="1000"
+                  min="100"
+                  max="5000"
+                  required
+                />
+              </div>
+              <div>
+                <label for="alto" class="form-label-small">Alto</label>
+                <input
+                  id="alto"
+                  v-model.number="formularioPlanta.dimensiones.alto"
+                  type="number"
+                  class="form-input"
+                  placeholder="280"
+                  min="200"
+                  max="1000"
+                  required
+                />
+              </div>
+            </div>
+          </div>
+
+          <!-- Peso máximo soportado -->
+          <div class="form-group">
+            <label for="pesoMaximo" class="form-label">Peso máximo soportado (kg)</label>
+            <input
+              id="pesoMaximo"
+              v-model.number="formularioPlanta.pesoMaximoSoportado"
+              type="number"
+              class="form-input"
+              placeholder="3000"
+              min="500"
+              max="50000"
+              required
+            />
+          </div>
+
           <div class="modal-footer">
             <button type="button" @click="cerrarModales" class="btn-cancel">Cancelar</button>
             <button type="submit" class="btn-save">
@@ -234,6 +300,12 @@ const plantaAEliminar = ref(null)
 const formularioPlanta = ref({
   nombre: '',
   descripcion: '',
+  dimensiones: {
+    alto: 280,
+    ancho: 800,
+    largo: 1000,
+  },
+  pesoMaximoSoportado: 3000,
 })
 
 // Computed
@@ -244,7 +316,7 @@ const elementosEnPlantaAEliminar = computed(() => {
 
 // Métodos
 const seleccionarPlanta = (plantaId) => {
-  canvasStore.seleccionarPlanta(plantaId)
+  canvasStore.navegarAPlanta(plantaId)
 }
 
 const contarElementosEnPlanta = (plantaId) => {
@@ -257,6 +329,12 @@ const editarPlantaActual = () => {
     formularioPlanta.value = {
       nombre: plantaActual.nombre,
       descripcion: plantaActual.descripcion || '',
+      dimensiones: {
+        alto: plantaActual.dimensiones?.alto || 280,
+        ancho: plantaActual.dimensiones?.ancho || 800,
+        largo: plantaActual.dimensiones?.largo || 1000,
+      },
+      pesoMaximoSoportado: plantaActual.pesoMaximoSoportado || 3000,
     }
     mostrarModalEditar.value = true
   }
@@ -295,15 +373,19 @@ const guardarPlanta = () => {
       canvasStore.editarPlanta(canvasStore.plantaActiva, {
         nombre: formularioPlanta.value.nombre.trim(),
         descripcion: formularioPlanta.value.descripcion.trim(),
+        dimensiones: formularioPlanta.value.dimensiones,
+        pesoMaximoSoportado: formularioPlanta.value.pesoMaximoSoportado,
       })
     } else {
       // Agregar nueva planta
       const nuevaPlantaId = canvasStore.agregarPlanta({
         nombre: formularioPlanta.value.nombre.trim(),
         descripcion: formularioPlanta.value.descripcion.trim(),
+        dimensiones: formularioPlanta.value.dimensiones,
+        pesoMaximoSoportado: formularioPlanta.value.pesoMaximoSoportado,
       })
       // Seleccionar la nueva planta
-      canvasStore.seleccionarPlanta(nuevaPlantaId)
+      canvasStore.navegarAPlanta(nuevaPlantaId)
     }
 
     cerrarModales()
@@ -319,6 +401,12 @@ const cerrarModales = () => {
   formularioPlanta.value = {
     nombre: '',
     descripcion: '',
+    dimensiones: {
+      alto: 280,
+      ancho: 800,
+      largo: 1000,
+    },
+    pesoMaximoSoportado: 3000,
   }
 }
 </script>
@@ -384,6 +472,14 @@ const cerrarModales = () => {
 .planta-elementos {
   font-size: 0.75rem;
   color: #6b7280;
+  margin: 0;
+}
+
+.planta-dimensiones {
+  font-size: 0.65rem;
+  color: #9ca3af;
+  margin: 0;
+  font-weight: 500;
 }
 
 /* Botones de acción */
@@ -514,6 +610,26 @@ const cerrarModales = () => {
   font-weight: 500;
   color: #374151;
   margin-bottom: 0.5rem;
+}
+
+.form-label-small {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #6b7280;
+}
+
+.grid {
+  display: grid;
+}
+
+.grid-cols-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.gap-3 {
+  gap: 0.75rem;
 }
 
 .form-input,

@@ -65,6 +65,12 @@ export const useCanvasStore = defineStore('canvas', () => {
       descripcion: 'Nivel principal del edificio',
       elementos: ['elem_1', 'elem_2'],
       activa: true,
+      dimensiones: {
+        alto: 300, // cm
+        ancho: 1000, // cm
+        largo: 1200, // cm
+      },
+      pesoMaximoSoportado: 5000, // kg
     },
     {
       id: 'planta_2',
@@ -72,6 +78,12 @@ export const useCanvasStore = defineStore('canvas', () => {
       descripcion: 'Segundo nivel del edificio',
       elementos: ['elem_3'],
       activa: false,
+      dimensiones: {
+        alto: 280,
+        ancho: 1000,
+        largo: 1200,
+      },
+      pesoMaximoSoportado: 4500,
     },
     {
       id: 'planta_3',
@@ -79,6 +91,12 @@ export const useCanvasStore = defineStore('canvas', () => {
       descripcion: 'Tercer nivel del edificio',
       elementos: [],
       activa: false,
+      dimensiones: {
+        alto: 280,
+        ancho: 800,
+        largo: 1000,
+      },
+      pesoMaximoSoportado: 4000,
     },
   ])
 
@@ -435,6 +453,22 @@ export const useCanvasStore = defineStore('canvas', () => {
     plantaActiva.value = plantaId
     // Deseleccionar elemento al cambiar de planta
     elementoSeleccionado.value = null
+
+    // Actualizar contexto de navegación
+    const planta = plantaPorId.value(plantaId)
+    if (planta) {
+      contextoNavegacion.value = {
+        tipo: 'planta',
+        id: plantaId,
+        path: [
+          {
+            tipo: 'planta',
+            id: plantaId,
+            nombre: planta.nombre,
+          },
+        ],
+      }
+    }
   }
 
   const agregarPlanta = (nuevaPlanta) => {
@@ -445,6 +479,12 @@ export const useCanvasStore = defineStore('canvas', () => {
       descripcion: nuevaPlanta.descripcion || '',
       elementos: [],
       activa: false,
+      dimensiones: {
+        alto: nuevaPlanta.dimensiones?.alto || 280,
+        ancho: nuevaPlanta.dimensiones?.ancho || 800,
+        largo: nuevaPlanta.dimensiones?.largo || 1000,
+      },
+      pesoMaximoSoportado: nuevaPlanta.pesoMaximoSoportado || 3000,
       ...nuevaPlanta,
     })
     return id
