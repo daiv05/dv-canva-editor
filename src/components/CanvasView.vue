@@ -276,8 +276,8 @@ const stageDragEnabled = ref(true)
 
 // Configuración del stage con zoom y pan
 const stageConfig = computed(() => ({
-  width: stageSize.value.width,
-  height: stageSize.value.height,
+  width: canvasStore.canvasAdaptativo.width || stageSize.value.width,
+  height: canvasStore.canvasAdaptativo.height || stageSize.value.height,
   scaleX: canvasStore.zoom,
   scaleY: canvasStore.zoom,
   x: canvasStore.panX,
@@ -360,8 +360,16 @@ const selectElement = (elementId) => {
 }
 
 const handleElementDoubleClick = (elemento) => {
-  if (elemento.hijos && elemento.hijos.length > 0) {
-    emit('drill-down', elemento)
+  console.log('Double-click en elemento:', elemento.nombre)
+
+  // Verificar si el elemento puede tener hijos (contenedor)
+  const tiposContenedor = ['anaqueles', 'estantes', 'armarios', 'contenedores', 'mesas']
+
+  if (tiposContenedor.includes(elemento.tipo)) {
+    console.log('Navegando al interior del elemento:', elemento.nombre)
+    canvasStore.navegarAElemento(elemento.id)
+  } else {
+    console.log('Elemento no es un contenedor:', elemento.tipo)
   }
 }
 
@@ -490,9 +498,8 @@ const createElementFromDrop = (data, dropEvent) => {
     height: height,
     color: color,
     forma: elemento.forma || 'rectangular',
-    plantaId: canvasStore.plantaActiva,
+    // No asignar plantaId ni padre aquí - el store se encarga según el contexto
     hijos: [],
-    padre: null,
     metadata: {
       pesoMaximo: elemento.pesoMaximo || 'N/A',
       ubicacion: elemento.ubicacion || elemento.montado || 'suelo',

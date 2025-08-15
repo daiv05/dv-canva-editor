@@ -27,6 +27,9 @@
     <!-- Panel de plantas -->
     <PlantasPanel />
 
+    <!-- Navegación jerárquica -->
+    <NavegacionJerarquica />
+
     <main class="app-main">
       <!-- Sidebar con tabs -->
       <div class="app-sidebar-left">
@@ -56,6 +59,7 @@ import PlantasPanel from './components/PlantasPanel.vue'
 import SidebarPanel from './components/SidebarPanel.vue'
 import PropiedadesPanel from './components/PropiedadesPanel.vue'
 import HistorialModal from './components/HistorialModal.vue'
+import NavegacionJerarquica from './components/NavegacionJerarquica.vue'
 import { useCanvasWithHistory } from './composables/useCanvasWithHistory'
 import { useCanvasBuffer } from './composables/useCanvasBuffer'
 
@@ -127,6 +131,12 @@ const handleMoveToBuffer = () => {
 }
 
 onMounted(() => {
+  // Inicializar contexto de navegación con planta por defecto
+  const plantaInicial = canvasStore.plantas.find((p) => p.activa) || canvasStore.plantas[0]
+  if (plantaInicial) {
+    canvasStore.navegarAPlanta(plantaInicial.id)
+  }
+
   window.addEventListener('keydown', handleKeydown)
 })
 

@@ -178,14 +178,18 @@ export const useCanvasBuffer = () => {
 
     const { elemento } = bufferItem
 
-    // Crear nuevo elemento en la planta actual
+    // Crear nuevo elemento en la posición especificada
     const newElement = {
       ...elemento,
       id: `${elemento.tipo}_${Date.now()}`, // Nuevo ID único
-      plantaId: canvasStore.plantaActiva,
       x: position.x,
       y: position.y,
+      // Remover plantaId y padre - el store se encarga según el contexto
     }
+
+    // Limpiar propiedades que el store manejará
+    delete newElement.plantaId
+    delete newElement.padre
 
     // Agregar al canvas
     canvasStore.agregarElemento(newElement)

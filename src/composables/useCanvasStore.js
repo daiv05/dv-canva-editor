@@ -93,16 +93,54 @@ export const useCanvasStore = defineStore('canvas', () => {
   const panX = ref(0)
   const panY = ref(0)
 
+  // === NAVEGACIÓN JERÁRQUICA ===
+  // Contexto de navegación: representa la "ubicación" actual en la jerarquía
+  const contextoNavegacion = ref({
+    tipo: 'planta', // 'planta' | 'elemento'
+    id: 'planta_1', // ID de la planta o elemento actual
+    path: [], // Array de objetos: [{ tipo: 'planta', id: 'planta_1', nombre: 'Planta Baja' }]
+  })
+
+  // Tamaño del canvas adaptativo según el contexto
+  const canvasAdaptativo = ref({
+    width: 800,
+    height: 600,
+    escala: 1,
+  })
+
   // Getters
   const elementosVisibles = computed(() => {
-    const visibles = elementos.value.filter((el) => el.plantaId === plantaActiva.value)
-    console.log('Elementos visibles calculados:', {
-      plantaActiva: plantaActiva.value,
-      totalElementos: elementos.value.length,
-      elementosVisibles: visibles.length,
-      elementos: visibles,
-    })
-    return visibles
+    // Si estamos en una planta, mostrar solo elementos de nivel raíz (sin padre)
+    if (contextoNavegacion.value.tipo === 'planta') {
+      const visibles = elementos.value.filter(
+        (el) => el.plantaId === contextoNavegacion.value.id && !el.padre,
+      )
+      console.log('Elementos visibles en planta (solo raíz):', {
+        plantaId: contextoNavegacion.value.id,
+        elementosRaiz: visibles.length,
+        elementos: visibles,
+      })
+      return visibles
+    }
+
+    // Si estamos dentro de un elemento, mostrar sus hijos
+    if (contextoNavegacion.value.tipo === 'elemento') {
+      const elementoPadre = elementos.value.find((el) => el.id === contextoNavegacion.value.id)
+      if (elementoPadre && elementoPadre.hijos) {
+        const hijosCompletos = elementoPadre.hijos
+          .map((hijoId) => elementos.value.find((el) => el.id === hijoId))
+          .filter(Boolean)
+
+        console.log('Elementos visibles en contenedor:', {
+          contenedorId: contextoNavegacion.value.id,
+          hijosVisibles: hijosCompletos.length,
+          hijos: hijosCompletos,
+        })
+        return hijosCompletos
+      }
+    }
+
+    return []
   })
 
   const elementoPorId = computed(() => (id) => {
@@ -125,6 +163,239 @@ export const useCanvasStore = defineStore('canvas', () => {
     if (!elementoSeleccionado.value) return null
     return elementos.value.find((el) => el.id === elementoSeleccionado.value)
   })
+
+  // === COMPUTED PARA NAVEGACIÓN JERÁRQUICA ===
+  const contextoActual = computed(() => {
+    return contextoNavegacion.value
+  })
+
+  const estaEnPlanta = computed(() => {
+    return contextoNavegacion.value.tipo === 'planta'
+  })
+
+  const estaEnElemento = computed(() => {
+    return contextoNavegacion.value.tipo === 'elemento'
+  })
+
+  const elementoContenedorActual = computed(() => {
+    if (contextoNavegacion.value.tipo === 'elemento') {
+      return elementos.value.find((el) => el.id === contextoNavegacion.value.id)
+    }
+    return null
+  })
+
+  const breadcrumbs = computed(() => {
+    const crumbs = []
+
+    // Siempre empezamos con la planta
+    const planta = plantaPorId.value(contextoNavegacion.value.path[0]?.id || plantaActiva.value)
+    if (planta) {
+      crumbs.push({
+        tipo: 'planta',
+        id: planta.id,
+        nombre: planta.nombre,
+        icono: '🏢',
+      })
+    }
+
+    // Agregar elementos del path
+    for (let i = 1; i < contextoNavegacion.value.path.length; i++) {
+      const pathItem = contextoNavegacion.value.path[i]
+      if (pathItem.tipo === 'elemento') {
+        const elemento = elementoPorId.value(pathItem.id)
+        if (elemento) {
+          crumbs.push({
+            tipo: 'elemento',
+            id: elemento.id,
+            nombre: elemento.nombre,
+            icono: getIconoElemento(elemento.tipo),
+          })
+        }
+      }
+    }
+
+    return crumbs
+  })
+
+  const puedeNavegar = computed(() => {
+    return contextoNavegacion.value.path.length > 1
+  })
+
+  // Helper function para iconos
+  const getIconoElemento = (tipo) => {
+    const iconos = {
+      anaqueles: '📚',
+      estantes: '📋',
+      mesas: '🗄️',
+      armarios: '🗃️',
+      contenedores: '📦',
+      cajas: '📦',
+    }
+    return iconos[tipo] || '📦'
+  }
+
+  // === FUNCIONES DE NAVEGACIÓN JERÁRQUICA ===
+  const navegarAElemento = (elementoId) => {
+    const elemento = elementoPorId.value(elementoId)
+    if (!elemento) {
+      console.error('Elemento no encontrado:', elementoId)
+      return
+    }
+
+    // Actualizar contexto de navegación
+    const nuevoPath = [...contextoNavegacion.value.path]
+    nuevoPath.push({
+      tipo: 'elemento',
+      id: elementoId,
+      nombre: elemento.nombre,
+    })
+
+    contextoNavegacion.value = {
+      tipo: 'elemento',
+      id: elementoId,
+      path: nuevoPath,
+    }
+
+    // Calcular tamaño del canvas según el elemento
+    calcularCanvasAdaptativo(elemento)
+
+    // Reset zoom y pan
+    zoom.value = 1
+    panX.value = 0
+    panY.value = 0
+
+    // Deseleccionar elemento actual
+    elementoSeleccionado.value = null
+
+    console.log('Navegando a elemento:', {
+      elementoId,
+      nombre: elemento.nombre,
+      path: nuevoPath,
+    })
+
+    // Guardar en historial
+    saveToHistory(`Navegación a ${elemento.nombre}`)
+  }
+
+  const navegarAlPadre = () => {
+    if (contextoNavegacion.value.path.length <= 1) {
+      console.warn('Ya estás en el nivel raíz')
+      return
+    }
+
+    // Remover último elemento del path
+    const nuevoPath = [...contextoNavegacion.value.path]
+    nuevoPath.pop()
+
+    const ultimoElemento = nuevoPath[nuevoPath.length - 1]
+
+    if (ultimoElemento.tipo === 'planta') {
+      // Regresar a vista de planta
+      contextoNavegacion.value = {
+        tipo: 'planta',
+        id: ultimoElemento.id,
+        path: nuevoPath,
+      }
+
+      // Reset canvas a tamaño por defecto
+      canvasAdaptativo.value = {
+        width: 800,
+        height: 600,
+        escala: 1,
+      }
+    } else {
+      // Regresar a elemento padre
+      contextoNavegacion.value = {
+        tipo: 'elemento',
+        id: ultimoElemento.id,
+        path: nuevoPath,
+      }
+
+      const elementoPadre = elementoPorId.value(ultimoElemento.id)
+      if (elementoPadre) {
+        calcularCanvasAdaptativo(elementoPadre)
+      }
+    }
+
+    // Reset zoom y pan
+    zoom.value = 1
+    panX.value = 0
+    panY.value = 0
+
+    // Deseleccionar elemento actual
+    elementoSeleccionado.value = null
+
+    console.log('Navegando al padre:', {
+      nuevoContexto: contextoNavegacion.value,
+      path: nuevoPath,
+    })
+
+    // Guardar en historial
+    saveToHistory(`Navegación al padre`)
+  }
+
+  const navegarAPlanta = (plantaId) => {
+    const planta = plantaPorId.value(plantaId)
+    if (!planta) {
+      console.error('Planta no encontrada:', plantaId)
+      return
+    }
+
+    // Reset a vista de planta
+    contextoNavegacion.value = {
+      tipo: 'planta',
+      id: plantaId,
+      path: [
+        {
+          tipo: 'planta',
+          id: plantaId,
+          nombre: planta.nombre,
+        },
+      ],
+    }
+
+    // Actualizar planta activa
+    plantaActiva.value = plantaId
+
+    // Reset canvas a tamaño por defecto
+    canvasAdaptativo.value = {
+      width: 800,
+      height: 600,
+      escala: 1,
+    }
+
+    // Reset zoom y pan
+    zoom.value = 1
+    panX.value = 0
+    panY.value = 0
+
+    // Deseleccionar elemento actual
+    elementoSeleccionado.value = null
+
+    console.log('Navegando a planta:', {
+      plantaId,
+      nombre: planta.nombre,
+    })
+
+    // Guardar en historial
+    saveToHistory(`Navegación a ${planta.nombre}`)
+  }
+
+  const calcularCanvasAdaptativo = (elemento) => {
+    // Calcular tamaño proporcional del canvas basado en las dimensiones del elemento
+    const factorEscala = 10 // Factor para hacer el canvas más grande que el elemento
+
+    canvasAdaptativo.value = {
+      width: Math.max(elemento.width * factorEscala, 400), // Mínimo 400px
+      height: Math.max(elemento.height * factorEscala, 300), // Mínimo 300px
+      escala: factorEscala,
+    }
+
+    console.log('Canvas adaptativo calculado:', {
+      elemento: { width: elemento.width, height: elemento.height },
+      canvas: canvasAdaptativo.value,
+    })
+  }
 
   // Actions
   const seleccionarElemento = (id) => {
@@ -207,9 +478,36 @@ export const useCanvasStore = defineStore('canvas', () => {
   // Actions para elementos
   const agregarElemento = (nuevoElemento) => {
     console.log('Agregando elemento al store:', nuevoElemento)
+
+    // Si estamos dentro de un elemento (no en una planta), el nuevo elemento es hijo
+    if (contextoNavegacion.value.tipo === 'elemento') {
+      const elementoPadre = elementos.value.find((el) => el.id === contextoNavegacion.value.id)
+      if (elementoPadre) {
+        // Agregar como hijo del elemento actual
+        nuevoElemento.padre = elementoPadre.id
+        nuevoElemento.plantaId = elementoPadre.plantaId // Hereda la planta del padre
+
+        // Agregar el ID del hijo al array de hijos del padre
+        if (!elementoPadre.hijos) {
+          elementoPadre.hijos = []
+        }
+        elementoPadre.hijos.push(nuevoElemento.id)
+
+        console.log('Elemento agregado como hijo de:', {
+          padre: elementoPadre.nombre,
+          hijo: nuevoElemento.nombre,
+          hijosDelPadre: elementoPadre.hijos.length,
+        })
+      }
+    } else {
+      // Si estamos en una planta, agregar normalmente
+      nuevoElemento.plantaId = contextoNavegacion.value.id
+      nuevoElemento.padre = null
+    }
+
     elementos.value.push(nuevoElemento)
     console.log('Total elementos en store:', elementos.value.length)
-    console.log('Elementos en planta activa:', elementosVisibles.value.length)
+    console.log('Elementos visibles:', elementosVisibles.value.length)
 
     // Guardar estado en historial
     saveToHistory(`Elemento agregado: ${nuevoElemento.nombre || nuevoElemento.tipo}`)
@@ -335,6 +633,16 @@ export const useCanvasStore = defineStore('canvas', () => {
     elementosEnPlanta,
     elementoSeleccionadoCompleto,
 
+    // Navegación jerárquica - Getters
+    contextoActual,
+    estaEnPlanta,
+    estaEnElemento,
+    elementoContenedorActual,
+    breadcrumbs,
+    puedeNavegar,
+    contextoNavegacion,
+    canvasAdaptativo,
+
     // Actions - Canvas
     seleccionarElemento,
     actualizarPosicion,
@@ -353,6 +661,12 @@ export const useCanvasStore = defineStore('canvas', () => {
     agregarElemento,
     eliminarElemento,
     toggleElementoVisibilidad,
+
+    // Navegación jerárquica - Actions
+    navegarAElemento,
+    navegarAlPadre,
+    navegarAPlanta,
+    calcularCanvasAdaptativo,
 
     // === INTEGRACIÓN CON HISTORIAL ===
     initializeHistory,
