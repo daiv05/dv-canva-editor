@@ -51,7 +51,7 @@
           :config="{
             x: 10,
             y: 10,
-            text: `Elementos: ${canvasStore.elementosVisibles.length}`,
+            text: `Elementos: ${elementosVisiblesEnCanvas.length}`,
             fontSize: 14,
             fontFamily: 'Arial',
             fill: '#000',
@@ -60,7 +60,7 @@
         />
 
         <!-- Renderizado de elementos del store -->
-        <template v-for="elemento in canvasStore.elementosVisibles" :key="elemento.id">
+        <template v-for="elemento in elementosVisiblesEnCanvas" :key="elemento.id">
           <!-- Elementos rectangulares (anaqueles, mesas, armarios, contenedores) -->
           <v-rect
             v-if="
@@ -284,6 +284,11 @@ const stageConfig = computed(() => ({
   y: canvasStore.panY,
   draggable: stageDragEnabled.value,
 }))
+
+// Elementos visibles en el canvas (excluye elementos ocultos)
+const elementosVisiblesEnCanvas = computed(() => {
+  return canvasStore.elementosVisibles.filter((elemento) => elemento.visible !== false)
+})
 
 // Grid de referencia
 const gridLines = computed(() => {

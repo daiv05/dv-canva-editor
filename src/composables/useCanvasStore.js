@@ -4,8 +4,34 @@
  * Store principal para el estado y lógica del canvas del editor visual jerárquico.
  *
  * Responsabilidades:
- * - Estado global del canvas (elementos, plantas, vista activa)
- * - Gestión de elem    // Actions - Plantas
+ * - Estado global del canvas (elementos, plantas, vista  const eliminarElemento = (elementoId) => {
+    const elemento = elementos.value.find((el) => el.id === elementoId)
+    const index = elementos.value.findIndex((el) => el.id === elementoId)
+
+    if (index > -1) {
+      elementos.value.splice(index, 1)
+
+      // Si se elimina el elemento seleccionado, deseleccionar
+      if (elementoSeleccionado.value === elementoId) {
+        elementoSeleccionado.value = null
+      }
+
+      // Guardar estado en historial
+      saveToHistory(`Elemento eliminado: ${elemento?.nombre || elemento?.tipo || elementoId}`)
+    }
+  }
+
+  const toggleElementoVisibilidad = (elementoId) => {
+    const elemento = elementos.value.find((el) => el.id === elementoId)
+    if (elemento) {
+      // Si no tiene propiedad visible, por defecto está visible (true)
+      elemento.visible = elemento.visible === false ? true : false
+
+      // Guardar estado en historial
+      const estado = elemento.visible ? 'mostrado' : 'ocultado'
+      saveToHistory(`Elemento ${estado}: ${elemento.nombre || elemento.tipo}`)
+    }
+  }stión de elem    // Actions - Plantas
     seleccionarPlanta,
     agregarPlanta,
     editarPlanta,
@@ -208,6 +234,18 @@ export const useCanvasStore = defineStore('canvas', () => {
     }
   }
 
+  const toggleElementoVisibilidad = (elementoId) => {
+    const elemento = elementos.value.find((el) => el.id === elementoId)
+    if (elemento) {
+      // Si no tiene propiedad visible, por defecto está visible (true)
+      elemento.visible = elemento.visible === false ? true : false
+
+      // Guardar estado en historial
+      const estado = elemento.visible ? 'mostrado' : 'ocultado'
+      saveToHistory(`Elemento ${estado}: ${elemento.nombre || elemento.tipo}`)
+    }
+  }
+
   // === INTEGRACIÓN CON HISTORIAL ===
 
   /**
@@ -314,6 +352,7 @@ export const useCanvasStore = defineStore('canvas', () => {
     // Actions - Elementos
     agregarElemento,
     eliminarElemento,
+    toggleElementoVisibilidad,
 
     // === INTEGRACIÓN CON HISTORIAL ===
     initializeHistory,
